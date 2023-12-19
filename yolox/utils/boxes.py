@@ -146,7 +146,7 @@ def poly_postprocess(prediction_rect, prediction_poly, num_apex, num_classes, co
 
     return output
 
-
+# 计算被选中的预测框和真实框之间的交占比
 def bboxes_iou(bboxes_a, bboxes_b, xyxy=True):
     if bboxes_a.shape[1] != 4 or bboxes_b.shape[1] != 4:
         raise IndexError

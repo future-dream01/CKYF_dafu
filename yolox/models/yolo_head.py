@@ -230,10 +230,10 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
                 x_shifts.append(grid[:, :, 0])          # 将grid张量中所有网格的x坐标赋给x_shifts列表
                 y_shifts.append(grid[:, :, 1])          # 将grid张量中所有网格的y坐标赋给y_shifts列表
                 expanded_strides.append(
-                    torch.zeros(1, grid.shape[1])       # 创建一个形状为[1,网格数]的矩阵
+                    torch.zeros(1, grid.shape[1])       # 创建一个形状为[1,特征图数]的矩阵
                     .fill_(stride_this_level)           # 用网格所在特征图的步长信息填充每个位置
                     .type_as(xin[0])
-                )                                       # 对于一个同一层级的特征图，步长矩阵形状为[1，N(网格总数)]
+                )                                       # 对于一个同一层级的特征图，步长矩阵形状为[1，特征图数]
 
                 # 如果使用的是l1损失函数（针对预测框预测），将reg_output重塑为[批次大小，-1（所有预测框），特征点坐标]
                 if self.use_l1:                         
@@ -260,9 +260,9 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
             if not self.use_distill:                    # 如果没有使用知识蒸馏
                 return self.get_losses(                 # 使用一般的损失函数
                     imgs,                               # 原始图片
-                    x_shifts,                           # 网格的x坐标列表
-                    y_shifts,                           # 网格的y坐标列表
-                    expanded_strides,                   # 网格的步长信息
+                    x_shifts,                           # 锚点/预测框相对于所在特征图左上角(原点)的x偏移量(坐标x)
+                    y_shifts,                           # 锚点/预测框相对于所在特征图左上角(原点)的y偏移量(坐标y)
+                    expanded_strides,                   # 锚点/预测框所在特征图相对于原图的缩放比例信息
                     labels,                             # 标签，包含真值框类别信息、坐标信息等
                     torch.cat(outputs, 1),              # 将重塑后的outputs列表中的所有特征图在预测框数量上拼接在一起
                     origin_preds,                       # 原始预测列表
@@ -418,6 +418,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
         dtype,
     ):
         # 将特征图切分成bbox,obj,color,cls
+        # 特征图结构：特征点坐标，前景，颜色，类别
         bbox_preds = outputs[:, :, :self.num_apexes * 2]                          # 获取outputs中的有关预测框回归的信息
         obj_preds = outputs[:, :, self.num_apexes * 2].unsqueeze(-1)              # 获取outputs中的有关置信度预测的信息
         color_preds = outputs[:, :, self.num_apexes * 2 + 1:self.num_apexes * 2 + 1 + self.num_colors]  # 获取outputs中的有关颜色预测的信息
@@ -479,7 +480,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
                     gt_classes,                 # 每张图中所有真值框分别所属的类别
                     gt_colors,                  # 每张图中所有真值框分别所属的颜色
                     rect_bboxes_preds_per_image,# 每张图中所有预测框的位置大小信息(关键点检测中，是包含所有关键点的最小矩形框)
-                    expanded_strides,           # 步长信息
+                    expanded_strides,           # 缩放比例信息
                     x_shifts,                   # 每个网格在原图中的x坐标
                     y_shifts,                   # 每个网格在原图中的y坐标
                     cls_preds,                  # 预测框有关类别的预测结果
@@ -680,12 +681,12 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
             x_shifts = x_shifts.cpu()
             y_shifts = y_shifts.cpu()
 
-        #Reduce the area of mathched anchors for dynamic k matching
+        # 为真值框匹配的预测框进行初步筛选
         fg_mask, is_in_boxes_and_center = self.get_in_boxes_info(
             gt_bboxes_per_image,
             expanded_strides,
-            x_shifts,
-            y_shifts,
+            x_shifts,                   
+            y_shifts,                    
             total_num_anchors,
             num_gt,
         )
@@ -704,7 +705,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
             gt_bboxes_per_image = gt_bboxes_per_image.cpu()
             bboxes_preds_per_image = bboxes_preds_per_image.cpu()
         
-        #Caculating cost
+        # 
         pair_wise_ious = bboxes_iou(gt_bboxes_per_image, bboxes_preds_per_image, False)
 
 
@@ -787,10 +788,11 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
             num_fg,
         )
 
+    # 通过判断预测框中心点是否在真值框内，来选择筛选掉一部分预测框
     def get_in_boxes_info(
         self,
         gt_bboxes_per_image,
-        expanded_strides,
+        expanded_strides,       
         x_shifts,
         y_shifts,
         total_num_anchors,
@@ -799,19 +801,19 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
         """
         Reduce the area of mathched anchors for dynamic k matching
         """
-        expanded_strides_per_image = expanded_strides[0]
-        x_shifts_per_image = x_shifts[0] * expanded_strides_per_image
-        y_shifts_per_image = y_shifts[0] * expanded_strides_per_image
+        expanded_strides_per_image = expanded_strides[0]                # 一维张量expanded_strides_per_image，储存每个特征图的缩放信息
+        x_shifts_per_image = x_shifts[0] * expanded_strides_per_image   # 一维张量x_shifts_per_image储存每个锚点/预测框相对于原图的左上角x坐标
+        y_shifts_per_image = y_shifts[0] * expanded_strides_per_image   # 一维张量y_shifts_per_image储存每个锚点/预测框相对于原图的左上角y坐标
         x_centers_per_image = (
             (x_shifts_per_image + 0.5 * expanded_strides_per_image)
             .unsqueeze(0)
             .repeat(num_gt, 1)
-        )  # [n_anchor] -> [n_gt, n_anchor]
+        )                                                               # 每个锚点/预测框在原图中的实际x坐标
         y_centers_per_image = (
             (y_shifts_per_image + 0.5 * expanded_strides_per_image)
             .unsqueeze(0)
             .repeat(num_gt, 1)
-        )
+        )                                                               # 每个锚点/预测框在原图中的实际y坐标
         #--------------------Caculating Ground True----------------------#  
         gt_bboxes_per_image_l = (
             (gt_bboxes_per_image[:, 0] - 0.5 * gt_bboxes_per_image[:, 2])
