@@ -34,7 +34,7 @@ class YOLOX(nn.Module):                 # 以nn模块中的Module类为父类创
         if self.training:               # 如果处于训练状态，计算损失，返回损失值字典
             
             assert targets is not None
-            loss, reg_loss, conf_loss, cls_loss, colors_loss, l1_loss, num_fg = self.head(
+            loss, reg_loss, conf_loss, cls_loss, l1_loss, num_fg = self.head(
                 fpn_outs, targets, x
             )                           # 这里直接将实例head作为函数使用，其实是调用了YOLOXHead类父类中的__call__方法，
                                         # 即调用YOLOXHead的forward()方法，输入fpn_outs，输出损失
@@ -44,7 +44,7 @@ class YOLOX(nn.Module):                 # 以nn模块中的Module类为父类创
                 "l1_loss": l1_loss,
                 "conf_loss": conf_loss,
                 "cls_loss": cls_loss,
-                "colors_loss":colors_loss,
+                #"colors_loss":colors_loss,
                 "num_fg": num_fg,
             }                           # 训练模式下，输出为包含各损失的字典
         else:

@@ -20,7 +20,7 @@ class Exp(BaseExp):                 # 实验配置类
         self.teacher_pth = "/home/rangeronmars/AI/TUP-NN-Train/teacher/teacher.pth" # 教师模型
         # ---------------- model config ---------------- #
         self.num_classes = 3        # 类别数，改动（8）
-        self.num_colors = 4         # 颜色数
+        #self.num_colors = 4         # 颜色数
         self.num_apexes = 5         # 特征点数，改动（4）
         self.depth = 1.00           # 网络深度因子
         self.width = 1.00           # 网络宽度因子
@@ -29,7 +29,7 @@ class Exp(BaseExp):                 # 实验配置类
         # ---------------- dataloader config ---------------- #
         # set worker to 4 for shorter dataloader init time
         self.data_num_workers = 8
-        self.input_size = (614,614)  # 输入宽度
+        self.input_size = (640,640)  # 输入宽度
         # Actual multiscale ranges: [640-5*32, 640+5*32].
         # To disable multiscale training, set the
         # self.multiscale_range to 0.
@@ -83,7 +83,7 @@ class Exp(BaseExp):                 # 实验配置类
         self.exp_name = os.path.split(os.path.realpath(__file__))[1].split(".")[0]
 
         # -----------------  testing config ------------------ #
-        self.test_size = (416,416)          # 输入尺寸
+        self.test_size = (640,640)          # 输入尺寸
         self.test_conf = 0.25
         self.nmsthre = 0.3
 
@@ -99,7 +99,7 @@ class Exp(BaseExp):                 # 实验配置类
             
             in_channels = [256, 512, 1024]
             backbone = YOLOPAFPN(self.depth, self.width, in_channels=in_channels, act=self.act)
-            head = YOLOXHead(self.num_apexes,self.num_classes,self.num_colors, self.width, in_channels=in_channels, act=self.act)
+            head = YOLOXHead(self.num_apexes,self.num_classes, self.width, in_channels=in_channels, act=self.act)
             self.model = YOLOX(backbone, head)
 
         self.model.apply(init_yolo)
@@ -295,7 +295,8 @@ class Exp(BaseExp):                 # 实验配置类
         val_loader = torch.utils.data.DataLoader(valdataset, **dataloader_kwargs)
 
         return val_loader
-
+    
+    # 获取评估器
     def get_evaluator(self, batch_size, is_distributed, testdev=False, legacy=False):
         """
         Get Evaluator for model.
@@ -310,7 +311,7 @@ class Exp(BaseExp):                 # 实验配置类
             nmsthre=self.nmsthre,
             num_apexes=self.num_apexes,
             num_classes=self.num_classes,
-            num_colors=self.num_colors,
+            #num_colors=self.num_colors,
             testdev=testdev,
             per_class_AP=self.per_class_AP,
             per_class_AR=self.per_class_AR

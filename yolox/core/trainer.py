@@ -305,7 +305,7 @@ class Trainer:
                         self.tblogger.add_scalar("train/l1_loss", self.loss["l1_loss"], self.epoch + 1)
                         self.tblogger.add_scalar("train/conf_loss", self.loss["conf_loss"], self.epoch + 1)
                         self.tblogger.add_scalar("train/cls_loss", self.loss["cls_loss"], self.epoch + 1)
-                        self.tblogger.add_scalar("train/colors_loss", self.loss["colors_loss"], self.epoch + 1)
+                        #self.tblogger.add_scalar("train/colors_loss", self.loss["colors_loss"], self.epoch + 1)
             self.meter.clear_meters()
 
         # random resizing

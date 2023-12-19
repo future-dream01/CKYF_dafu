@@ -30,7 +30,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
         self,
         num_apexes,                         # 特征点数
         num_classes,                        # 目标类别数
-        num_colors,                         # 目标颜色数
+        #num_colors,                         # 目标颜色数
         width=1.0,
         strides=[8, 16, 32],                # 步长
         in_channels=[256, 512, 1024],
@@ -46,12 +46,12 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
         self.n_anchors = 1                  # 每个网格上的预测框数量
         self.num_apexes = num_apexes        # 特征点属性
         self.num_classes = num_classes      # 类别数属性
-        self.num_colors = num_colors        # 颜色属性    
+        #self.num_colors = num_colors        # 颜色属性    
         self.decode_in_inference = True     # for deploy, set to False
         self.cls_convs = nn.ModuleList()    # 创建模块列表，存放类别特征提取卷积层
         self.reg_convs = nn.ModuleList()    # 创建模块列表，存放预测框回归卷积层
         self.cls_preds = nn.ModuleList()    # 创建模块列表，存放类别预测卷积层
-        self.color_preds = nn.ModuleList()  # 创建模块列表，存放
+        #self.color_preds = nn.ModuleList()  # 创建模块列表，存放
         self.reg_preds = nn.ModuleList()    # 创建模块列表，存放预测框回归卷积层
         self.obj_preds = nn.ModuleList()    # 创建模块列表，存放前景预测卷积层
         self.in_channels = in_channels      # 输入通道数属性
@@ -125,15 +125,15 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
             )
 
             # 颜色预测卷积层
-            self.color_preds.append(
-                nn.Conv2d(
-                    in_channels=int(256 * width),
-                    out_channels=self.n_anchors * self.num_colors,
-                    kernel_size=1,
-                    stride=1,
-                    padding=0,
-                )
-            )
+           # self.color_preds.append(
+               # nn.Conv2d(
+                    #in_channels=int(256 * width),
+                    #out_channels=self.n_anchors * self.num_colors,
+                    #kernel_size=1,
+                    #stride=1,
+                    #padding=0,
+               # )
+           # )
 
             # 预测框预测卷积层
             self.reg_preds.append(
@@ -165,7 +165,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
         # self.bcewithlog_loss_cls = nn.BCEWithLogitsLoss(pos_weight=self.alpha_cls, reduction="none")
         # self.bcewithlog_loss_colors = nn.BCEWithLogitsLoss(pos_weight=self.alpha_cls_colors, reduction="none")
         self.bcewithlog_loss_cls = nn.BCEWithLogitsLoss(reduction="none")    # 定义类别损失函数，结合了sigmoid层和BCELoss
-        self.bcewithlog_loss_colors = nn.BCEWithLogitsLoss(reduction="none") # 定义颜色损失函数，结合了sigmoid层和BCELoss
+        #self.bcewithlog_loss_colors = nn.BCEWithLogitsLoss(reduction="none") # 定义颜色损失函数，结合了sigmoid层和BCELoss
         # self.focal_loss_obj = FocalLoss(alpha=0.25, gamma=2)
         # self.focal_loss_cls = FocalLoss(alpha=self.alpha_cls, gamma=2, num_classes=self.num_classes)
         # self.focal_loss_colors = FocalLoss(alpha=self.alpha_cls_colors, gamma=2, num_classes=self.num_colors)
@@ -180,10 +180,10 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
             b.data.fill_(-math.log((1 - prior_prob) / prior_prob))
             conv.bias = torch.nn.Parameter(b.view(-1), requires_grad=True)
 
-        for conv in self.color_preds:
-            b = conv.bias.view(self.n_anchors, -1)
-            b.data.fill_(-math.log((1 - prior_prob) / prior_prob))
-            conv.bias = torch.nn.Parameter(b.view(-1), requires_grad=True)
+        #for conv in self.color_preds:
+            #b = conv.bias.view(self.n_anchors, -1)
+            #b.data.fill_(-math.log((1 - prior_prob) / prior_prob))
+            #conv.bias = torch.nn.Parameter(b.view(-1), requires_grad=True)
 
         for conv in self.obj_preds:
             b = conv.bias.view(self.n_anchors, -1)
@@ -209,7 +209,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
             cls_output = self.cls_preds[k](cls_feat)    # 使用 类别预测卷积层 对 类别特征提取卷积操作 的结果进行卷积
 
             # 颜色
-            color_output = self.color_preds[k](cls_feat)# 使用 颜色预测卷积层 对 类别特征提取卷积操作 的结果进行卷积
+            #color_output = self.color_preds[k](cls_feat)# 使用 颜色预测卷积层 对 类别特征提取卷积操作 的结果进行卷积
 
             # 预测框
             reg_feat = reg_conv(reg_x)                  # 使用 预测框框回归卷积层 对 reg_x 进行卷积
@@ -220,12 +220,12 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
 
             # 如果处于训练模式，重塑output、grid、reg_output
             if self.training:                           
-                output = torch.cat([reg_output, obj_output, color_output, cls_output], 1) # 将预测框(10)、前景(1)、颜色(4)、类别(3)的卷积预测结果进行concat操作，深度上连接
+                output = torch.cat([reg_output, obj_output, cls_output], 1) # 将预测框(10)、前景(1)、颜色(4)、类别(3)的卷积预测结果进行concat操作，深度上连接
                                                                                           # 特征图形状一般是[批次图片数量，通道数，高度，宽度]
                 output, grid = self.get_output_and_grid(
                     output, k, stride_this_level, xin[0].type()
                 )                                       # 将output内部重新排列 [批次图片数量,每个网格预测框数*高度*宽度（预测框总数），-1（表示所有预测特征）]
-                                                        # grid张量存放特征图的每个网格对应在原始图片中的坐标 [1(每个特征图都相同),特征图高度*宽度(网格数)，2(表示两个坐标x、y)]
+                                                        # grid张量存放特征图的每个锚点/预测框对应在此特征图中的坐标 [1(每个特征图都相同),特征图高度*宽度(网格数)，2(表示两个坐标x、y)]
 
                 x_shifts.append(grid[:, :, 0])          # 将grid张量中所有网格的x坐标赋给x_shifts列表
                 y_shifts.append(grid[:, :, 1])          # 将grid张量中所有网格的y坐标赋给y_shifts列表
@@ -250,7 +250,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
             # 如果是推理模式，直接将预测框预测特征图、前景预测特征图、颜色预测特征图、类别预测特征图融合在一起
             else:                                       
                 output = torch.cat(
-                    [reg_output, obj_output.sigmoid(), color_output.sigmoid(), cls_output.sigmoid()], 1
+                    [reg_output, obj_output.sigmoid(), cls_output.sigmoid()], 1
                 )                                       # 使用concat操作融合
 
             outputs.append(output)                      # 将output加入到outputs中去
@@ -295,7 +295,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
     def get_output_and_grid(self, output, k, stride, dtype):        # 重塑output张量，使得其包含实际图像中的位置信息
         grid = self.grids[k]                                       
         batch_size = output.shape[0]
-        n_ch = 1 + self.num_apexes * 2 + self.num_classes + self.num_colors
+        n_ch = 1 + self.num_apexes * 2 + self.num_classes 
         hsize, wsize = output.shape[-2:]
         if grid.shape[2:4] != output.shape[2:4]:
             #Generate grid
@@ -346,13 +346,13 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
         # # Cut feature map into bbox,obj,color,cls
         bbox_preds = outputs[:, :, :self.num_apexes * 2].contiguous()  # [batch, n_anchors_all, self.num_apexes * 2]
         obj_preds = outputs[:, :, self.num_apexes * 2].contiguous()  # [batch, n_anchors_all, 1]
-        color_preds = outputs[:, :, self.num_apexes * 2 + 1 :self.num_apexes * 2 + 1 + self.num_colors].contiguous()  # [batch, n_anchors_all, n_color]
-        cls_preds = outputs[:, :, self.num_apexes * 2 + 1 + self.num_colors:].contiguous()  # [batch, n_anchors_all, n_cls]
+       # color_preds = outputs[:, :, self.num_apexes * 2 + 1 :self.num_apexes * 2 + 1 + self.num_colors].contiguous()  # [batch, n_anchors_all, n_color]
+        cls_preds = outputs[:, :, self.num_apexes * 2 + 1 :].contiguous()  # [batch, n_anchors_all, n_cls]
 
         bbox_teacher = labels[:, :, :self.num_apexes * 2].contiguous()  # [batch, n_anchors_all, self.num_apexes * 2]
         obj_teacher = labels[:, :, self.num_apexes * 2].contiguous()  # [batch, n_anchors_all, 1]
-        color_teacher = labels[:, :, self.num_apexes * 2 + 1:self.num_apexes * 2 + 1 + self.num_colors].contiguous()  # [batch, n_anchors_all, n_color]
-        cls_teacher = labels[:, :, self.num_apexes * 2 + 1 + self.num_colors:].contiguous()  # [batch, n_anchors_all, n_cls]
+        #color_teacher = labels[:, :, self.num_apexes * 2 + 1:self.num_apexes * 2 + 1 + self.num_colors].contiguous()  # [batch, n_anchors_all, n_color]
+        cls_teacher = labels[:, :, self.num_apexes * 2 + 1 :].contiguous()  # [batch, n_anchors_all, n_cls]
 
         x_shifts = torch.cat(x_shifts, 1)  # [1, n_anchors_all]
         y_shifts = torch.cat(y_shifts, 1)  # [1, n_anchors_all]
@@ -376,11 +376,11 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
             self.bcewithlog_loss_cls(cls_preds[gt_masks].view(-1, self.num_classes), cls_teacher[gt_masks].view(-1, self.num_classes))
         ).sum() / num_postive
 
-        loss_colors = (
-            self.bcewithlog_loss_colors(
-                color_preds[gt_masks].view(-1, self.num_colors), color_teacher[gt_masks].view(-1, self.num_colors)
-            )
-        ).sum() / num_postive
+        #loss_colors = (
+            #self.bcewithlog_loss_colors(
+                #color_preds[gt_masks].view(-1, self.num_colors), color_teacher[gt_masks].view(-1, self.num_colors)
+            #)
+       # ).sum() / num_postive
 
         if self.use_l1:
             loss_l1 = (
@@ -391,16 +391,16 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
 
         reg_weight = 100
         conf_weight = 1
-        clr_weight = 1
+        #clr_weight = 1
         cls_weight = 1
-        loss = reg_weight * loss_reg + conf_weight * loss_obj + cls_weight * loss_cls  + clr_weight * loss_colors + 0.1 * loss_l1
+        loss = reg_weight * loss_reg + conf_weight * loss_obj + cls_weight * loss_cls  + 0.1 * loss_l1
 
         return (
             loss,
             reg_weight * loss_reg,
             conf_weight * loss_obj,
             cls_weight * loss_cls,
-            clr_weight * loss_colors,
+            #clr_weight * loss_colors,
             0.1 * loss_l1,
             1,
         )
@@ -421,8 +421,8 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
         # 特征图结构：特征点坐标，前景，颜色，类别
         bbox_preds = outputs[:, :, :self.num_apexes * 2]                          # 获取outputs中的有关预测框回归的信息
         obj_preds = outputs[:, :, self.num_apexes * 2].unsqueeze(-1)              # 获取outputs中的有关置信度预测的信息
-        color_preds = outputs[:, :, self.num_apexes * 2 + 1:self.num_apexes * 2 + 1 + self.num_colors]  # 获取outputs中的有关颜色预测的信息
-        cls_preds = outputs[:, :, self.num_apexes * 2 + 1 + self.num_colors:]     # 获取outputs中的有关类别预测的信息
+        #color_preds = outputs[:, :, self.num_apexes * 2 + 1:self.num_apexes * 2 + 1 + self.num_colors]  # 获取outputs中的有关颜色预测的信息
+        cls_preds = outputs[:, :, self.num_apexes * 2 + 1:]     # 获取outputs中的有关类别预测的信息
 
         nlabel = (labels.sum(dim=2) > 0).sum(dim=1)               # 
 
@@ -434,7 +434,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
             origin_preds = torch.cat(origin_preds, 1)             # 得到原始的只包含预测框回归有关参数的张量
 
         cls_targets = []                                          # 类别类型目标信息
-        colors_targets = []                                       # 颜色类型目标信息
+        #colors_targets = []                                       # 颜色类型目标信息
         reg_targets = []                                          # 预测框类型目标信息
         l1_targets = []                                           # l1类型目标信息
         obj_targets = []                                          # 前景类型目标信息
@@ -448,7 +448,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
             num_gts += num_gt                                              # 真值框数累加
             if num_gt == 0:                                                # 如果没有目标，创建一系列空列表
                 cls_target = outputs.new_zeros((0, self.num_classes))      
-                colors_target = outputs.new_zeros((0, self.num_colors))     
+                #colors_target = outputs.new_zeros((0, self.num_colors))     
                 reg_target = outputs.new_zeros((0, self.num_apexes * 2))
                 l1_target = outputs.new_zeros((0, self.num_apexes * 2))
                 obj_target = outputs.new_zeros((total_num_anchors, 1))
@@ -457,7 +457,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
                 gt_bboxes_per_image = labels[batch_idx, :num_gt, 2:2 + self.num_apexes * 2] # 提取真值框的位置目标信息，二维张量
                                                                                             # `2:2 + self.num_apexes * 2`:从第2个位置到第(2+5*2)个位置，即所有坐标信息
                 gt_classes = labels[batch_idx, :num_gt, 0]                                  # 提取真值框所属的类别信息
-                gt_colors = labels[batch_idx, :num_gt, 1]                                   # 提真值框所属的颜色信息
+                #gt_colors = labels[batch_idx, :num_gt, 1]                                   # 提真值框所属的颜色信息
 
                 bboxes_preds_per_image = bbox_preds[batch_idx]                              # 预测框的位置信息
                 gt_rect_bboxes_per_image = min_rect(gt_bboxes_per_image)                    # min_rect()函数生成一个包含真值关键点的最小边界框，可以用于NMS、定位、分类、多任务学习等
@@ -467,7 +467,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
                 try:                        
                     (
                     gt_matched_classes,         # 被选中的预测框分别的真实类别
-                    gt_matched_colors,          # 被选中的预测框分别的真实颜色
+                    #gt_matched_colors,          # 被选中的预测框分别的真实颜色
                     fg_mask,                    # 前景掩码，长度等于所有预测框个数，每个如果包含了感兴趣物体，则置True，否则置Falth
                     pred_ious_this_matching,    # 被选中的预测框分别相对于真值框的交占比IOU
                     matched_gt_inds,            # 被选中的预测框分别对应的真值框的索引
@@ -478,13 +478,13 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
                     total_num_anchors,          # 每张图片中的总预测框数
                     gt_rect_bboxes_per_image,   # 每张图片中的真值框的位置大小信息(关键点检测中，是包含所有关键点的最小矩形框)
                     gt_classes,                 # 每张图中所有真值框分别所属的类别
-                    gt_colors,                  # 每张图中所有真值框分别所属的颜色
+                    #gt_colors,                  # 每张图中所有真值框分别所属的颜色
                     rect_bboxes_preds_per_image,# 每张图中所有预测框的位置大小信息(关键点检测中，是包含所有关键点的最小矩形框)
                     expanded_strides,           # 缩放比例信息
                     x_shifts,                   # 每个网格在原图中的x坐标
                     y_shifts,                   # 每个网格在原图中的y坐标
                     cls_preds,                  # 预测框有关类别的预测结果
-                    color_preds,                # 预测框有关颜色的预测结果
+                    #color_preds,                # 预测框有关颜色的预测结果
                     bbox_preds,                 # 预测框有关位置信息的预测结果
                     obj_preds,                  # 预测框有关前景信息的预测结果
                     labels,                     # 标签
@@ -499,7 +499,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
                     # torch.cuda.empty_cache()
                     (
                         gt_matched_classes,
-                        gt_matched_colors,
+                        #gt_matched_colors,
                         fg_mask,
                         pred_ious_this_matching,
                         matched_gt_inds,
@@ -510,13 +510,13 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
                         total_num_anchors,      
                         gt_rect_bboxes_per_image,   
                         gt_classes,           
-                        gt_colors,
+                        #gt_colors,
                         rect_bboxes_preds_per_image,
                         expanded_strides,
                         x_shifts,
                         y_shifts,
                         cls_preds,
-                        color_preds,
+                        #color_preds,
                         bbox_preds,
                         obj_preds,
                         labels,
@@ -530,9 +530,9 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
                 cls_target = F.one_hot(                         # 将预测框的真实类别写成one-hot编码的格式，再于预测框的IOU值相乘，组成加权one-hot编码，区分不同的匹配程度；扩维
                     gt_matched_classes.to(torch.int64), self.num_classes
                 ) * pred_ious_this_matching.unsqueeze(-1)
-                colors_target = F.one_hot(                      # 颜色类别同理，组成加权one-hot编码
-                    gt_matched_colors.to(torch.int64), self.num_colors
-                ) * pred_ious_this_matching.unsqueeze(-1)
+                #colors_target = F.one_hot(                      # 颜色类别同理，组成加权one-hot编码
+                    #gt_matched_colors.to(torch.int64), self.num_colors
+                #) * pred_ious_this_matching.unsqueeze(-1)
                 # print(cls_target)
                 # print(pred_ious_this_matching.unsqueeze(-1))
                 # cls_target = gt_matched_classes.to(torch.int64) * pred_ious_this_matching.unsqueeze(-1)
@@ -550,7 +550,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
 
 
             cls_targets.append(cls_target)                      # 被选中的预测框的加权类别one-hot编码
-            colors_targets.append(colors_target)                # 被选中的预测框的加权颜色one-hot编码
+            #colors_targets.append(colors_target)                # 被选中的预测框的加权颜色one-hot编码
             reg_targets.append(reg_target)                      # 被选中的预测框对应的真值框的关键点信息列表
             obj_targets.append(obj_target.to(dtype))            # 所有预测框的前景编码(扩维后)
             fg_masks.append(fg_mask)                            # 所有预测框的前景编码(扩维前)
@@ -558,7 +558,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
                 l1_targets.append(l1_target)                    # 将l1_target加入l1_targets中
 
         cls_targets = torch.cat(cls_targets, 0)                 # 将cls_targets在预测框个数上合并，包含一整个批次内的所有被选中预测框的加权类别one-hot编码
-        colors_targets = torch.cat(colors_targets, 0)           # 将colors_targets在预测框个数上合并，包含一整个批次内的所有被选中预测框的加权颜色one-hot编码
+        #colors_targets = torch.cat(colors_targets, 0)           # 将colors_targets在预测框个数上合并，包含一整个批次内的所有被选中预测框的加权颜色one-hot编码
         reg_targets = torch.cat(reg_targets, 0)                 # 将reg_targets在预测框个数上合并，包含一整个批次内的所有被选中的预测框对应的真值框的关键点坐标
         obj_targets = torch.cat(obj_targets, 0)                 # 将obj_targets在预测框个数上合并，包含一整个批次内所有预测框的前景编码(二维矩阵)
         fg_masks = torch.cat(fg_masks, 0)                       # 将fg_masks在预测框个数上合并，包含一整个批次内所有预测框的前景编码(一维向量)
@@ -591,11 +591,11 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
         loss_cls = loss_cls.sum() / num_fg                      # 对所有被选中的预测框的类别损失求和再除以总前景框数，求得平均类别损失
 
          # 颜色损失
-        loss_colors = (
-            self.bcewithlog_loss_colors(
-                color_preds.view(-1, self.num_colors)[fg_masks], colors_targets
-            )                                                   # 
-        ).sum() / num_fg
+        #loss_colors = (
+            #self.bcewithlog_loss_colors(
+               # color_preds.view(-1, self.num_colors)[fg_masks], colors_targets
+           # )                                                   # 
+       # ).sum() / num_fg
         # print(cls_target)
 
         # loss_obj = (
@@ -623,16 +623,16 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
 
         reg_weight = 80         # 定位损失权重
         conf_weight = 1.5       # 前景损失权重
-        clr_weight = 1          # 颜色损失权重
+        #clr_weight = 1          # 颜色损失权重
         cls_weight = 1          # 分类损失权重
-        loss = reg_weight * loss_reg + conf_weight * loss_obj + cls_weight * loss_cls  + clr_weight * loss_colors + loss_l1
+        loss = reg_weight * loss_reg + conf_weight * loss_obj + cls_weight * loss_cls  + loss_l1
 
         return (
             loss,                       # 总损失
             reg_weight * loss_reg,      # 定位损失
             conf_weight * loss_obj,     # 前景损失
             cls_weight * loss_cls,      # 类别损失
-            clr_weight * loss_colors,   # 颜色损失
+            #clr_weight * loss_colors,   # 颜色损失
             loss_l1,                    # l1损失
             num_fg / max(num_gts, 1),   # 前景框数除以真值框数
         )                               # 返回各损失
@@ -658,13 +658,13 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
         total_num_anchors,
         gt_bboxes_per_image,
         gt_classes,
-        gt_colors,
+        #gt_colors,
         bboxes_preds_per_image,
         expanded_strides,
         x_shifts,
         y_shifts,
         cls_preds,
-        color_preds,
+        #color_preds,
         bbox_preds,
         obj_preds,
         labels,
@@ -676,7 +676,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
             gt_bboxes_per_image = gt_bboxes_per_image.cpu().float()
             bboxes_preds_per_image = bboxes_preds_per_image.cpu().float()
             gt_classes = gt_classes.cpu().float()
-            gt_colors = gt_colors.cpu().float()
+            #gt_colors = gt_colors.cpu().float()
             expanded_strides = expanded_strides.cpu().float()
             x_shifts = x_shifts.cpu()
             y_shifts = y_shifts.cpu()
@@ -697,7 +697,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
         # print(gt_bboxes_per_image)
         # print("="*50)
         cls_preds_ = cls_preds[batch_idx][fg_mask]
-        color_preds_ = color_preds[batch_idx][fg_mask]
+        # color_preds_ = color_preds[batch_idx][fg_mask]
         obj_preds_ = obj_preds[batch_idx][fg_mask]
         num_in_boxes_anchor = bboxes_preds_per_image.shape[0]
 
@@ -716,27 +716,27 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
             .repeat(1, num_in_boxes_anchor, 1)
         )
 
-        gt_colors_per_image = (
-            F.one_hot(gt_colors.to(torch.int64), self.num_colors)
-            .float()
-            .unsqueeze(1)
-            .repeat(1, num_in_boxes_anchor, 1)
-        )
+        #gt_colors_per_image = (
+            #F.one_hot(gt_colors.to(torch.int64), self.num_colors)
+            #.float()
+            #.unsqueeze(1)
+           # .repeat(1, num_in_boxes_anchor, 1)
+       # )
 
         pair_wise_ious_loss = -torch.log(pair_wise_ious + 1e-8)
 
         if mode == "cpu":
-            cls_preds_, color_preds_, obj_preds_ = cls_preds_.cpu(), color_preds_.cpu(), obj_preds_.cpu()
+            cls_preds_, obj_preds_ = cls_preds_.cpu(), obj_preds_.cpu()
 
         with torch.cuda.amp.autocast(enabled=False):
             cls_preds_ = (
                 cls_preds_.float().unsqueeze(0).repeat(num_gt, 1, 1).sigmoid_()
                 * obj_preds_.float().unsqueeze(0).repeat(num_gt, 1, 1).sigmoid_()
             )
-            color_preds_ = (
-                color_preds_.float().unsqueeze(0).repeat(num_gt, 1, 1).sigmoid_()
-                * obj_preds_.float().unsqueeze(0).repeat(num_gt, 1, 1).sigmoid_()
-            )
+            #color_preds_ = (
+                #color_preds_.float().unsqueeze(0).repeat(num_gt, 1, 1).sigmoid_()
+                #* obj_preds_.float().unsqueeze(0).repeat(num_gt, 1, 1).sigmoid_()
+            #)
             # pair_wise_colors_loss = F.binary_cross_entropy(
             #     color_preds_.sqrt_(), gt_colors_per_image, reduction="none"
             # ).sum(-1)
@@ -744,20 +744,19 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
             #     cls_preds_.sqrt_(), gt_cls_per_image, reduction="none"
             # ).sum(-1)
             # print(colors_preds_.sqrt_())
-            pair_wise_colors_loss = F.binary_cross_entropy_with_logits(
-                color_preds_.sqrt_(), gt_colors_per_image, reduction="none"
-            ).sum(-1)
+            #pair_wise_colors_loss = F.binary_cross_entropy_with_logits(
+                #color_preds_.sqrt_(), gt_colors_per_image, reduction="none"
+            #).sum(-1)
             pair_wise_cls_loss = F.binary_cross_entropy_with_logits(
                 cls_preds_.sqrt_(), gt_cls_per_image, reduction="none"
             ).sum(-1)
 
             # print(pair_wise_cls_loss.shape)
             # print(pair_wise_colors_loss.shape)
-        del cls_preds_, color_preds_
-
+        del cls_preds_
         cost = (
             0.5 * pair_wise_cls_loss
-            + 0.5 * pair_wise_colors_loss
+            #+ 0.5 * pair_wise_colors_loss
             + 3.0 * pair_wise_ious_loss
             + 100000.0 * (~is_in_boxes_and_center)
         )
@@ -766,22 +765,21 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
         (
             num_fg,
             gt_matched_classes,
-            gt_matched_colors,
             pred_ious_this_matching,
             matched_gt_inds,
-        ) = self.dynamic_k_matching(cost, pair_wise_ious, gt_classes, gt_colors, num_gt, fg_mask)
-        del pair_wise_cls_loss, pair_wise_colors_loss, cost, pair_wise_ious, pair_wise_ious_loss
+        ) = self.dynamic_k_matching( cost, pair_wise_ious, gt_classes, num_gt, fg_mask)
+        del pair_wise_cls_loss,cost, pair_wise_ious, pair_wise_ious_loss
 
         if mode == "cpu":
             gt_matched_classes = gt_matched_classes.cuda()
-            gt_matched_colors = gt_matched_colors.cuda()
+            #gt_matched_colors = gt_matched_colors.cuda()
             fg_mask = fg_mask.cuda()
             pred_ious_this_matching = pred_ious_this_matching.cuda()
             matched_gt_inds = matched_gt_inds.cuda()
 
         return (
             gt_matched_classes,
-            gt_matched_colors,
+            # gt_matched_colors,
             fg_mask,
             pred_ious_this_matching,
             matched_gt_inds,
@@ -877,7 +875,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
         )
         return is_in_boxes_anchor, is_in_boxes_and_center
 
-    def dynamic_k_matching(self, cost, pair_wise_ious, gt_classes, gt_colors, num_gt, fg_mask):  # 为每个真值框分配最合适的预测框
+    def dynamic_k_matching(self, cost, pair_wise_ious, gt_classes, num_gt, fg_mask):  # 为每个真值框分配最合适的预测框
         # Dynamic K
         # ---------------------------------------------------------------
         matching_matrix = torch.zeros_like(cost, dtype=torch.uint8)
@@ -907,10 +905,10 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
 
         matched_gt_inds = matching_matrix[:, fg_mask_inboxes].argmax(0)
         gt_matched_classes = gt_classes[matched_gt_inds]
-        gt_matched_colors = gt_colors[matched_gt_inds]
+        #gt_matched_colors = gt_colors[matched_gt_inds]
 
         pred_ious_this_matching = (matching_matrix * pair_wise_ious).sum(0)[
             fg_mask_inboxes
         ]
-        return num_fg, gt_matched_classes, gt_matched_colors, pred_ious_this_matching, matched_gt_inds
+        return num_fg, gt_matched_classes, pred_ious_this_matching, matched_gt_inds
 

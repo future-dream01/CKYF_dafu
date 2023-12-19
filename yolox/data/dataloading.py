@@ -25,7 +25,7 @@ def get_yolox_datadir():
         import yolox
 
         yolox_path = os.path.dirname(os.path.dirname(yolox.__file__))
-        yolox_datadir = os.path.join(yolox_path, "datasets")
+        yolox_datadir = os.path.join(yolox_path)
     return yolox_datadir
 
 
