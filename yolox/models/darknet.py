@@ -110,7 +110,7 @@ class CSPDarknet(nn.Module):
         dep_mul,            # 深度因子
         wid_mul,            # 宽度因子
         out_features=("dark3", "dark4", "dark5"),
-        depthwise=False,
+        depthwise=True,
         act="silu",
     ):
         super().__init__()

@@ -35,7 +35,7 @@ class YOLOXHead(nn.Module):                 # 基于父类Module创建YOLOXHead�
         strides=[8, 16, 32],                # 步长
         in_channels=[256, 512, 1024],
         act="silu",
-        depthwise=False,                    # 深度可分离卷积
+        depthwise=True,                    # 深度可分离卷积
     ):
         """
         Args:

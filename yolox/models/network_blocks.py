@@ -109,9 +109,9 @@ class Bottleneck(nn.Module):
         self,
         in_channels,
         out_channels,
-        shortcut=True,
-        expansion=0.5,
-        depthwise=False,
+        shortcut=True,      # 是否加入残差连接
+        expansion=0.5,      # 隐藏层输出的宽度和输出层输出的宽度的比值
+        depthwise=False,    # 是否使用深度可分离卷积
         act="hswish",
     ):
         super().__init__()
@@ -176,12 +176,12 @@ class CSPLayer(nn.Module):
 
     def __init__(
         self,
-        in_channels,
-        out_channels,
+        in_channels,                        # 输入通道
+        out_channels,                       # 输出通道
         n=1,                                # bottleneck层数量
         shortcut=True,                      # 是否在bottleneck里面加入残差连接
-        expansion=0.5,                      # 隐藏层宽度（输入和输出的中间层）
-        depthwise=False,                    # 是否使用深度可分离卷积，每个通道分别进卷积，减小计算量
+        expansion=0.5,                      # 隐藏层(输入和输出的中间层）宽度和输出层宽度比值
+        depthwise=True,                    # 是否使用深度可分离卷积，每个通道分别进卷积，减小计算量
         act="hswish",                       # 激活函数hswish，相比于swish更简单
     ):
         """
@@ -190,9 +190,8 @@ class CSPLayer(nn.Module):
             out_channels (int): output channels.
             n (int): number of Bottlenecks. Default value: 1.
         """
-        # ch_in, ch_out, number, shortcut, groups, expansion
         super().__init__()
-        hidden_channels = int(out_channels * expansion)                                  # 隐藏层通道数
+        hidden_channels = int(out_channels * expansion)                                  # 隐藏层(非输入输出层)通道数
         self.conv1 = BaseConv(in_channels, hidden_channels, 1, stride=1, act=act)        # 基本卷积层
         self.conv2 = BaseConv(in_channels, hidden_channels, 1, stride=1, act=act)
         self.conv3 = BaseConv(2 * hidden_channels, out_channels, 1, stride=1, act=act)
@@ -205,10 +204,10 @@ class CSPLayer(nn.Module):
         self.m = nn.Sequential(*module_list)
 
     def forward(self, x):
-        x_1 = self.conv1(x)                 # 通过conv1
-        x_2 = self.conv2(x)                 # 通过conv2
+        x_1 = self.conv1(x)                 # 通过conv1普通卷积层
+        x_2 = self.conv2(x)                 # 通过conv2普通卷积层
         x_1 = self.m(x_1)                   # 通过多个Bottleneck层
-        x = torch.cat((x_1, x_2), dim=1)    # concat操作
+        x = torch.cat((x_1, x_2), dim=1)    # concat操作，深度上相融
         return self.conv3(x)                # 经过conv3
 
 class Focus(nn.Module):
