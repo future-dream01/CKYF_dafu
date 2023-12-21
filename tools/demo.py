@@ -115,7 +115,7 @@ class Predictor(object):
         self.decoder = decoder
         self.num_apexes = exp.num_apexes
         self.num_classes = exp.num_classes
-        self.num_colors = exp.num_colors
+        #self.num_colors = exp.num_colors
         self.confthre = exp.test_conf
         self.nmsthre = exp.nmsthre
         self.test_size = exp.test_size
@@ -171,14 +171,14 @@ class Predictor(object):
 
             conf_preds = outputs[:,:,self.num_apexes * 2].unsqueeze(-1)
 
-            cls_preds = outputs[:,:,self.num_apexes * 2 + 1 + self.num_colors:].repeat(1, 1, self.num_colors)
+            cls_preds = outputs[:,:,self.num_apexes * 2 + 1 :]
             #Initialize colors_preds
-            colors_preds = torch.clone(cls_preds)
+            #colors_preds = torch.clone(cls_preds)
 
-            for i in range(self.num_colors):
-                colors_preds[:,:,i * self.num_classes:(i + 1) * self.num_classes] = outputs[:,:,self.num_apexes * 2 + 1 + i:self.num_apexes * 2 + 1 + i + 1].repeat(1, 1, self.num_classes)
+            #for i in range(self.num_colors):
+                #colors_preds[:,:,i * self.num_classes:(i + 1) * self.num_classes] = outputs[:,:,self.num_apexes * 2 + 1 + i:self.num_apexes * 2 + 1 + i + 1].repeat(1, 1, self.num_classes)
                     
-            cls_preds_converted = (colors_preds + cls_preds) / 2.0
+            cls_preds_converted =  cls_preds
 
             outputs_rect = torch.cat((bbox_preds,conf_preds,cls_preds_converted),dim=2)
             outputs_poly = torch.cat((outputs[:,:,:self.num_apexes * 2],conf_preds,cls_preds_converted),dim=2)
@@ -187,7 +187,7 @@ class Predictor(object):
                 outputs_rect,
                 outputs_poly,
                 self.num_apexes,
-                self.num_classes * self.num_colors,
+                self.num_classes ,
                 self.confthre,
                 self.nmsthre
             )
