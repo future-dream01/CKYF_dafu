@@ -51,13 +51,13 @@ class Shufflenet(nn.Module):
         # x = self.coord(x)
         outputs["stem"] = x
         x = self.conv1(x)
-        outputs["stage1"] = x
+        outputs["dark2"] = x
         x = self.stage2(x)
-        outputs["stage2"] = x
+        outputs["dark3"] = x
         x = self.stage3(x)
-        outputs["stage3"] = x
+        outputs["dark4"] = x
         x = self.stage4(x)
-        outputs["stage4"] = x
+        outputs["dark5"] = x
         # print("stem", outputs["stem"].shape)
         # print("stage2", outputs["stage2"].shape)
         # print("stage3", outputs["stage3"].shape)

@@ -88,7 +88,7 @@ class Exp(BaseExp):                 # 实验配置类
         self.nmsthre = 0.3
 
     def get_model(self):                # 获取训练模型
-        from yolox.models import YOLOX, YOLOPAFPN, YOLOXHead ,YOLOGhostPAN
+        from yolox.models import YOLOX, YOLOPAFPN, YOLOXHead ,YOLOGhostPAN,ShuffleV2PAFPN
         def init_yolo(M):
             for m in M.modules():
                 if isinstance(m, nn.BatchNorm2d):
@@ -96,7 +96,7 @@ class Exp(BaseExp):                 # 实验配置类
                     m.momentum = 0.03
         if getattr(self, "model", None) is None:
             in_channels = [256, 512, 1024]
-            backbone = YOLOGhostPAN(self.depth, self.width, in_channels=in_channels, act=self.act)
+            backbone = ShuffleV2PAFPN(self.depth, self.width, in_channels=in_channels, act=self.act)
             head = YOLOXHead(self.num_apexes,self.num_classes, self.width, in_channels=in_channels, act=self.act)
             self.model = YOLOX(backbone, head)
 
