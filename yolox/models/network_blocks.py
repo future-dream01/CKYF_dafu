@@ -181,7 +181,7 @@ class CSPLayer(nn.Module):
         n=1,                                # bottleneck层数量
         shortcut=True,                      # 是否在bottleneck里面加入残差连接
         expansion=0.5,                      # 隐藏层(输入和输出的中间层）宽度和输出层宽度比值
-        depthwise=True,                    # 是否使用深度可分离卷积，每个通道分别进卷积，减小计算量
+        depthwise=True,                     # 是否使用深度可分离卷积，每个通道分别进卷积，减小计算量
         act="hswish",                       # 激活函数hswish，相比于swish更简单
     ):
         """

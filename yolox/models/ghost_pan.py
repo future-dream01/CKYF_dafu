@@ -71,6 +71,7 @@ class GhostBlocks(nn.Module):
             out = out + self.reduce_conv(x)
         return out
 
+# GhostPAN结构
 #TODO:可尝试修改上采样配置
 class GhostPAN(nn.Module):
     """Path Aggregation Network with Ghost block.
@@ -97,11 +98,11 @@ class GhostPAN(nn.Module):
         self,
         in_channels,
         out_channels,
-        use_depthwise=False,
+        use_depthwise=False,          # 是否使用深度可分离卷积
         kernel_size=5,
         expand=1,
         num_blocks=1,
-        use_res=False,
+        use_res=False,                 # 是否使用残差连接
         num_extra_level=0,
         upsample_cfg=dict(scale_factor=2, mode="bilinear"),
         activation="hswish",

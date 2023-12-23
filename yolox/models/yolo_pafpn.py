@@ -2,7 +2,7 @@
 # -*- encoding: utf-8 -*-
 # Copyright (c) 2014-2021 Megvii Inc. All rights reserved.
 
-# 基于CSP和FPN结构的Backbone骨干网络
+# 基于CSP和PAN结构的Backbone骨干网络
 
 import torch
 import torch.nn as nn
@@ -22,11 +22,12 @@ class YOLOPAFPN(nn.Module):                         # 以Module类为父类定�
         act="silu",                                 # 激活函数silu
     ):  
         super().__init__()                          # 父类初始化
-        self.backbone = CSPDarknet(depth, width, depthwise=depthwise, act=act) # 创建CSPDarknet网络作为主体部分
+
+        # Backbone结构使用CSPDarknet
+        self.backbone = CSPDarknet(depth, width, depthwise=depthwise, act=act)
         self.in_features = in_features              # 创建输入特征层属性
         self.in_channels = in_channels              # 创建输入通道数属性
         Conv = DWConv if depthwise else BaseConv    # depthwise为True:深度卷积；为Fulse：不使用深度卷积
-
         self.upsample = nn.Upsample(scale_factor=2, mode="nearest") # 创建上采样层，用于特征图尺寸放大
         self.lateral_conv0 = BaseConv(
             int(in_channels[2] * width), int(in_channels[1] * width), 1, 1, act=act
@@ -87,7 +88,7 @@ class YOLOPAFPN(nn.Module):                         # 以Module类为父类定�
         features = [out_features[f] for f in self.in_features] # 将三个深度层级的特征图赋给features
         [x2, x1, x0] = features                     # 将x2、x1、x0分别赋为来自三个深度层级"dark3", "dark4", "dark5"的特征图
 
-        ## FPN结构
+        ## PAN结构
         # 深层与中层融合到中层
         fpn_out0 = self.lateral_conv0(x0)           # 经过一个侧边卷积层，通道数减半（1024->512），尺寸不变（1/32） 
         f_out0 = self.upsample(fpn_out0)            # 经过一个深-中上采样层，通道数不变（512），尺寸增加（1/16），尺寸数不变
