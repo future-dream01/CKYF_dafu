@@ -27,7 +27,7 @@ class YOLOGhostPAN(nn.Module):
         self.backbone = CSPDarknet(depth, width, depthwise=depthwise, act=act)
         self.in_features = in_features
         self.in_channels = [round(in_channels[0] * width), round(in_channels[1] * width), round(in_channels[2] * width)]
-        self.out_channels = self.in_channels[0]
+        self.out_channels = self.in_channels
         Conv = DWConv if depthwise else BaseConv
 
         # Neck结构使用GhostPAN

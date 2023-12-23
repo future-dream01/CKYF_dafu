@@ -74,136 +74,91 @@ class GhostBlocks(nn.Module):
 # GhostPAN结构
 #TODO:可尝试修改上采样配置
 class GhostPAN(nn.Module):
-    """Path Aggregation Network with Ghost block.
-
-    Args:
-        in_channels (List[int]): Number of input channels per scale.
-        out_channels (int): Number of output channels (used at each scale)
-        num_csp_blocks (int): Number of bottlenecks in CSPLayer. Default: 3
-        use_depthwise (bool): Whether to depthwise separable convolution in
-            blocks. Default: False
-        kernel_size (int): Kernel size of depthwise convolution. Default: 5.
-        expand (int): Expand ratio of GhostBottleneck. Default: 1.
-        num_blocks (int): Number of GhostBottlecneck blocks. Default: 1.
-        use_res (bool): Whether to use residual connection. Default: False.
-        num_extra_level (int): Number of extra conv layers for more feature levels.
-            Default: 0.
-        upsample_cfg (dict): Config dict for interpolate layer.
-            Default: `dict(scale_factor=2, mode='nearest')`
-        activation (str): Activation layer name.
-            Default: LeakyReLU.
-    """
-
     def __init__(
         self,
         in_channels,
-        out_channels,
-        use_depthwise=False,          # 是否使用深度可分离卷积
+        out_channels,  # 输出通道数分别为 256, 512, 1024
+        use_depthwise=False,
         kernel_size=5,
         expand=1,
         num_blocks=1,
-        use_res=False,                 # 是否使用残差连接
+        use_res=False,
         num_extra_level=0,
         upsample_cfg=dict(scale_factor=2, mode="bilinear"),
         activation="hswish",
     ):
         super(GhostPAN, self).__init__()
-        assert num_extra_level >= 0
-        assert num_blocks >= 1
+        assert len(out_channels) == len(in_channels)
         self.in_channels = in_channels
         self.out_channels = out_channels
-        self.activation=activation
+        self.activation = activation
 
-        # conv = DepthwiseConvModule if use_depthwise else ConvModule
         Conv = DWConv if use_depthwise else BaseConv
-        # build top-down blocks
+
+        # 创建上采样、下采样和融合层
         self.upsample = nn.Upsample(**upsample_cfg)
         self.reduce_layers = nn.ModuleList()
-        for idx in range(len(in_channels)):
-            self.reduce_layers.append(
-                BaseConv(
-                    in_channels=in_channels[idx],
-                    out_channels=out_channels,
-                    ksize=1,
-                    stride=1,
-                    act=self.activation,
-                )
-            )
         self.top_down_blocks = nn.ModuleList()
-        for idx in range(len(in_channels) - 1, 0, -1):
-            self.top_down_blocks.append(
-                GhostBlocks(
-                    out_channels * 2,
-                    out_channels,
-                    expand,
-                    kernel_size=kernel_size,
-                    num_blocks=num_blocks,
-                    use_res=use_res,
-                    activation=activation,
-                )
-            )
-
-        # build bottom-up blocks
         self.downsamples = nn.ModuleList()
         self.bottom_up_blocks = nn.ModuleList()
-        for idx in range(len(in_channels) - 1):
+
+        # 构建上采样层和融合层
+        for idx in range(len(in_channels)):
+            if idx < len(in_channels) - 1:
+                self.reduce_layers.append(
+                    BaseConv(
+                        in_channels=in_channels[idx],
+                        out_channels=out_channels[idx],
+                        ksize=1, stride=1, act=self.activation,
+                    )
+                )
+                self.top_down_blocks.append(
+                    GhostBlocks(
+                        out_channels[idx] + out_channels[idx + 1],
+                        out_channels[idx],
+                        expand, kernel_size, num_blocks, use_res, activation,
+                    )
+                )
+
+        # 构建下采样层和融合层
+        for idx in range(1, len(in_channels)):
             self.downsamples.append(
                 Conv(
-                    out_channels,
-                    out_channels,
-                    kernel_size,
-                    stride=2,
-                    act=self.activation,
+                    out_channels[idx - 1],
+                    out_channels[idx - 1],
+                    kernel_size, stride=2, act=self.activation,
                 )
             )
             self.bottom_up_blocks.append(
                 GhostBlocks(
-                    out_channels * 2,
-                    out_channels,
-                    expand,
-                    kernel_size=kernel_size,
-                    num_blocks=num_blocks,
-                    use_res=use_res,
-                    activation=activation,
+                    out_channels[idx - 1] + out_channels[idx],
+                    out_channels[idx],
+                    expand, kernel_size, num_blocks, use_res, activation,
                 )
             )
 
     def forward(self, inputs):
-        """
-        Args:
-            inputs (tuple[Tensor]): input features.
-        Returns:
-            tuple[Tensor]: multi level features.
-        """
         assert len(inputs) == len(self.in_channels)
-        # Reduce layers
-        inputs = [
-            reduce(input_x) for input_x, reduce in zip(inputs, self.reduce_layers)
-        ]
-        # top-down path
+
+        # 缩减层
+        inputs = [reduce(input_x) for input_x, reduce in zip(inputs, self.reduce_layers)]
+
+        # 自顶向下路径
         inner_outs = [inputs[-1]]
         for idx in range(len(self.in_channels) - 1, 0, -1):
-            feat_heigh = inner_outs[0]
-            feat_low = inputs[idx - 1]
-
-            inner_outs[0] = feat_heigh
-
-            upsample_feat = self.upsample(feat_heigh)
-
+            upsample_feat = self.upsample(inner_outs[0])
             inner_out = self.top_down_blocks[len(self.in_channels) - 1 - idx](
-                torch.cat([upsample_feat, feat_low], 1)
+                torch.cat([upsample_feat, inputs[idx - 1]], 1)
             )
             inner_outs.insert(0, inner_out)
-        # bottom-up path
+
+        # 自底向上路径
         outs = [inner_outs[0]]
         for idx in range(len(self.in_channels) - 1):
-            feat_low = outs[-1]
-            feat_height = inner_outs[idx + 1]
-            downsample_feat = self.downsamples[idx](feat_low)
+            downsample_feat = self.downsamples[idx](outs[-1])
             out = self.bottom_up_blocks[idx](
-                torch.cat([downsample_feat, feat_height], 1)
+                torch.cat([downsample_feat, inner_outs[idx + 1]], 1)
             )
             outs.append(out)
-
 
         return tuple(outs)
