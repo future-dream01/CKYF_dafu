@@ -25,11 +25,11 @@ class YOLOFPN(nn.Module):
         self.in_features = in_features
 
         # out 1
-        self.out1_cbl = self._make_cbl(512, 256, 1)
+        self.out1_cbl = self._make_cbl(768, 256, 1)
         self.out1 = self._make_embedding([256, 512], 512 + 256)
 
         # out 2
-        self.out2_cbl = self._make_cbl(256, 128, 1)
+        self.out2_cbl = self._make_cbl(1536, 512, 1)
         self.out2 = self._make_embedding([128, 256], 256 + 128)
 
         # upsample
@@ -66,19 +66,20 @@ class YOLOFPN(nn.Module):
         """
         #  backbone
         out_features = self.backbone(inputs)
-        x2, x1, x0 = [out_features[f] for f in self.in_features]
+        x0, x1, x2 = [out_features[f] for f in self.in_features]
 
         #  yolo branch 1
-        x1_in = self.out1_cbl(x0)
-        x1_in = self.upsample(x1_in)
-        x1_in = torch.cat([x1_in, x1], 1)
-        out_dark4 = self.out1(x1_in)
+        x1_in = self.upsample(x1)
+        x1_in = torch.cat([x1_in, x0], 1)
+        x1_in = self.out1_cbl(x1_in)
+        out_dark3 = x1_in
 
         #  yolo branch 2
-        x2_in = self.out2_cbl(out_dark4)
-        x2_in = self.upsample(x2_in)
-        x2_in = torch.cat([x2_in, x2], 1)
-        out_dark3 = self.out2(x2_in)
+        x2_in = self.upsample(x2)
+        x2_in = torch.cat([x2_in, x1], 1)
+        x2_in = self.out2_cbl(x2_in)
+        out_dark4=x2_in
 
-        outputs = (out_dark3, out_dark4, x0)
+        outputs = (out_dark3, out_dark4, x2)
         return outputs
+    

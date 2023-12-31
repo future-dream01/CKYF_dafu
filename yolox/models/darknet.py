@@ -84,7 +84,7 @@ class Darknet(nn.Module):
                     activation="lrelu",
                 ),
                 BaseConv(filters_list[0], filters_list[1], 3, stride=1, act="lrelu"),
-                BaseConv(filters_list[1], filters_list[0], 1, stride=1, act="lrelu"),
+                BaseConv(filters_list[1], filters_list[1], 1, stride=1, act="lrelu"),
             ]
         )
         return m
